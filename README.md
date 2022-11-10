@@ -1,5 +1,5 @@
 # pydrive-demo
-Accessing Google Drive (listing and upload) using PyDrive
+Setting up directory syncing with Google Drive using PyDrive
 
 ## Setup
 The setup involves creating an authorization flow and setting up the local environment with the required libraries.
@@ -22,12 +22,30 @@ Authorization is done.
 ### Setting up the local environment
 Create a virtual environment using the [req.txt](req.txt) file.
 
-## Using the upload service
-The sample service present in [backup.py](backup.py) is written to upload the files present in the sub-directories of a certain folder to the Google Drive folder by the same name. The directory structure for the sub-directories will be preserved. 
+## Using the sync service
+[`main.py`](main.py) syncs (to an extent) the contents of the `LOCAL_DIR` directory (present locally) and the `SERVER_ID` directory ID obtained from a Google Drive URL. This service **DOES NOT** perform any destructive action! Only creates files & directories.
 
-What's happening in the background:
-* It lists out the sub-directories in the directory (in Google Drive) whose directory ID is entered.
-* For every sub-dir on the remote, it attempts to list out the files present in the local sub-directory by the same name.
-* If such a local sub-directory is found, it iterates over all the files present in it. If any of these files is not on the Drive, it uploads it.
-* This is done for all the sub-directories of the parent (whose ID is passed in).
-* If no new files are present, it just says that all files are up to date.
+### What's happening in the background:
+* We list out the files & dirs in the `LOCAL_DIR` and `SERVER_ID` (in Drive)
+* We upload any new files on the PC and download any new files from the Drive folder
+* For any conflicting files, no changes are made (for now...)
+* Then, any new local directories are uploaded (recursively i.e. all their content is uploaded)
+* Then any new server directories are downloaded (recursively i.e. all their content is downloaded)
+* For directories that are already present in both locations (i.e. locally and on the server) we run the entire procedure again (to manage potential changes in them).
+
+### Additional Modifications done:
+* For Drive files that are created using services like Docs, Sheets, etc.:
+  - The files don't have an extension when they are stored in the Drive.
+  - Such files can be identified using their `mimeType` attribute. 
+  - Accordingly, when listing server files of such types, appropriate extensions are added (using the `EXTENSIONS` dictionary) to prevent unnecessary duplication due to extension mismatch
+
+## TODOs
+* When two files with the same name are found, conflict resolution can be performed by breaking ties in the following order
+  - Last modified (The newer file would be kept) - would require deletion!
+  - Size - in case the modified time is same, keep the larger file (rationale: editing PDFs, adding annotations would always increase file size)
+  - Instead, maybe show the size as well as last modified time to the user and ask which copy(ies) to retain.
+* How to handle renaming?
+  - Maybe keep track of any missing files and cross reference that with the new files (based on extensions) 
+    - would require indexing to keep track of what file was there the last time.
+    - instead of indexing, maybe just compare files between the server and the local directory 
+  - Give the user the new and missing files (extension-wise) and ask which copy to keep or whether to keep both of them.
